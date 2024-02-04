@@ -1,0 +1,85 @@
+1. Tampilkan seluruh data dari tabel "employees" (5 Points)
+2. Berapa banyak karyawan yang memiliki posisi pekerjaan (job title) "Manager"? (5 Points)
+3. Tampilkan daftar nama dan gaji (salary) dari karyawan yang bekerja di departemen "Sales" atau "Marketing" (10 Points)
+4. Hitung rata-rata gaji (salary) dari karyawan yang bergabung (joined) dalam 5 tahun terakhir (berdasarkan kolom "joined_date") (10 Points)
+5. Tampilkan 5 karyawan dengan total penjualan (sales) tertinggi dari tabel "employees" dan "sales_data" (10 Points)
+6. Tampilkan nama, gaji (salary), dan rata-rata gaji (salary) dari semua karyawan yang bekerja di departemen yang memiliki rata-rata gaji lebih tinggi dari gaji rata-rata di semua departemen (15 Points)
+7. Tampilkan nama dan total penjualan (sales) dari setiap karyawan, bersama dengan peringkat (ranking) masing-masing karyawan berdasarkan total penjualan. Peringkat 1 adalah karyawan dengan total penjualan tertinggi (25 Points)
+8. Buat sebuah stored procedure yang menerima nama departemen sebagai input, dan mengembalikan daftar karyawan dalam departemen tersebut bersama dengan total gaji (salary) yang mereka terima (20 Points)
+
+
+JAWABAN
+
+(1) SELECT * FROM employees;
+
+(2) SELECT COUNT(employee_id) AS count_manager_job_title
+FROM employees 
+WHERE job_title = 'Manager';
+
+(3) SELECT name, salary 
+FROM employees 
+WHERE department IN ('Sales', 'Marketing');
+
+(4)
+// Hasil rata-rata tidak dilakukan pembulatan 
+SELECT AVG(salary) as avg_salary 
+FROM employees 
+WHERE joined_date >= DATE_SUB(CURDATE(), INTERVAL 5 YEAR);
+
+// Hasil rata-rata dilakukan pembulatan
+SELECT ROUND(AVG(salary)) as avg_salary 
+FROM employees 
+WHERE joined_date >= DATE_SUB(CURDATE(), INTERVAL 5 YEAR);
+
+(5)
+SELECT 
+    employees.employee_id,
+    employees.name,
+    SUM(sales_data.sales) as total_sales
+FROM 
+    employees
+JOIN 
+    sales_data ON employees.employee_id = sales_data.employee_id
+GROUP BY 
+    employees.employee_id, employees.name
+ORDER BY 
+    total_sales DESC
+LIMIT 5
+
+(6)
+SELECT employees.name, employees.salary, ROUND(average_data.avg_salary) AS department_avg_salary
+FROM employees
+JOIN (
+    SELECT department, AVG(salary) AS avg_salary
+    FROM employees
+    GROUP BY department
+) average_data ON employees.department = average_data.department
+WHERE average_data.avg_salary > (
+    SELECT AVG(salary)
+    FROM employees
+)
+ORDER BY department_avg_salary DESC;
+
+(7)
+SELECT 
+	employees.employee_id,
+	employees.name,
+    SUM(sales_data.sales),
+    RANK() OVER (ORDER BY SUM(sales_data.sales) DESC) AS sales_rank
+FROM employees
+JOIN
+	sales_data ON employees.employee_id = sales_data.employee_id
+GROUP BY
+	employees.employee_id
+ORDER BY
+	sales_rank;
+
+(8)
+CREATE PROCEDURE `GetEmployeeByDepartment`(IN department_name varchar(20))
+BEGIN
+	SELECT
+		employees.name,
+        employees.salary
+	FROM employees
+    WHERE employees.department = department_name;
+END
